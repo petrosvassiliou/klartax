@@ -410,7 +410,9 @@ fun KlartaxAdaptiveApp(
                         onConvertQuoteToOrder = viewModel::convertQuoteToOrderConfirmation,
                         onConvertToEInvoice = viewModel::convertQuoteOrOrderToEInvoice,
                         onMarkInvoicePaid = viewModel::markInvoiceAsPaidAndBookToEur,
-                        onCreateStornoInvoice = viewModel::createStornoForInvoice
+                        onCreateStornoInvoice = viewModel::createStornoForInvoice,
+                        onAdvanceDunningLevel = viewModel::advanceInvoiceDunningLevel,
+                        onAddTimeTrackingEntry = viewModel::addTimeTrackingEntry
                     )
                     KlartaxDestination.WISO_INCOME_TAX -> ExpressiveWiso3PaneScreen(
                         state = currentState,
@@ -423,7 +425,8 @@ fun KlartaxAdaptiveApp(
                         onUpdateCommuteDays = viewModel::updateCommuteWorkdays,
                         onUpdateWorkEquipmentEuro = viewModel::updateWorkEquipmentEuro,
                         onUpdateChildcareCents = viewModel::updateChildcareExpensesCents,
-                        onUpdateSec35aLaborCents = viewModel::updateSec35aEligibleLaborCents
+                        onUpdateSec35aLaborCents = viewModel::updateSec35aEligibleLaborCents,
+                        onApplyNebenkostenSec35a = viewModel::applyNebenkostenSec35aAssistant
                     )
                     KlartaxDestination.ELSTER_BESCHEID_SYNC -> ExpressiveElsterBescheidSyncScreen(
                         state = currentState,
@@ -3121,33 +3124,48 @@ private fun ExpressiveEInvoiceStudioScreen(
                         )
                     }
 
-                    OutlinedButton(
-                        onClick = {
-                            val unbilled = state.timeEntries.filter { !it.isBilled }
-                            if (unbilled.isNotEmpty()) {
-                                unbilled.forEach { entry ->
-                                    val hrs = BigDecimal(entry.durationMinutes)
-                                        .divide(BigDecimal("60"), 2, RoundingMode.HALF_UP)
-                                    val netLine = hrs.multiply(Money.fromCents(entry.hourlyRateNetCents))
-                                        .setScale(2, RoundingMode.HALF_UP)
-                                    lineItems.add(
-                                        InvoiceLineItem(
-                                            positionNumber = lineItems.size + 1,
-                                            title = "${entry.projectName}: ${entry.taskDescription}",
-                                            description = "Zeiterfassung vom ${entry.dateIso}",
-                                            quantityHoursOrUnits = hrs.toPlainString(),
-                                            unitCode = "HUR",
-                                            unitPriceNetCents = entry.hourlyRateNetCents,
-                                            vatRatePercent = vatRateInt,
-                                            lineNetTotalCents = Money.toCents(netLine),
-                                            articleNumber = "ZEIT"
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                onAddTimeTrackingEntry(
+                                    "Sprint & Architektur-Beratung",
+                                    customerName,
+                                    "Technische Konzeption & Code-Review",
+                                    120,
+                                    "150,00"
+                                )
+                            }
+                        ) {
+                            Text("⏱ +2 Std. erfassen")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val unbilled = state.timeEntries.filter { !it.isBilled }
+                                if (unbilled.isNotEmpty()) {
+                                    unbilled.forEach { entry ->
+                                        val hrs = BigDecimal(entry.durationMinutes)
+                                            .divide(BigDecimal("60"), 2, RoundingMode.HALF_UP)
+                                        val netLine = hrs.multiply(Money.fromCents(entry.hourlyRateNetCents))
+                                            .setScale(2, RoundingMode.HALF_UP)
+                                        lineItems.add(
+                                            InvoiceLineItem(
+                                                positionNumber = lineItems.size + 1,
+                                                title = "${entry.projectName}: ${entry.taskDescription}",
+                                                description = "Zeiterfassung vom ${entry.dateIso}",
+                                                quantityHoursOrUnits = hrs.toPlainString(),
+                                                unitCode = "HUR",
+                                                unitPriceNetCents = entry.hourlyRateNetCents,
+                                                vatRatePercent = vatRateInt,
+                                                lineNetTotalCents = Money.toCents(netLine),
+                                                articleNumber = "ZEIT"
+                                            )
                                         )
-                                    )
+                                    }
                                 }
                             }
+                        ) {
+                            Text("+ Zeiterfassung (${state.timeEntries.count { !it.isBilled }})")
                         }
-                    ) {
-                        Text("+ Zeiterfassung (${state.timeEntries.count { !it.isBilled }})")
                     }
                 }
 
@@ -3874,7 +3892,14 @@ private fun ExpressiveWiso3PaneScreen(
     onUpdateCommuteDays: (Int) -> Unit,
     onUpdateWorkEquipmentEuro: (String) -> Unit,
     onUpdateChildcareCents: (Long) -> Unit,
-    onUpdateSec35aLaborCents: (de.klartax.app.data.local.entities.SpecialExpenseAndBurdenEntity, Long) -> Unit
+    onUpdateSec35aLaborCents: (de.klartax.app.data.local.entities.SpecialExpenseAndBurdenEntity, Long) -> Unit,
+    onApplyNebenkostenSec35a: (
+        caretakerEuro: String,
+        gardenEuro: String,
+        cleaningEuro: String,
+        chimneyEuro: String,
+        winterServiceEuro: String
+    ) -> Unit
 ) {
     val summary = state.taxSummary
     val emp = state.employmentRecords.firstOrNull()
@@ -4235,6 +4260,86 @@ private fun ExpressiveWiso3PaneScreen(
                                     }
                                 }
                             }
+
+                        // Interaktiver Nebenkostenabrechnungs-Assistent (§ 35a EStG)
+                        var nkCaretaker by remember { mutableStateOf("420,00") }
+                        var nkGarden by remember { mutableStateOf("280,00") }
+                        var nkCleaning by remember { mutableStateOf("310,00") }
+                        var nkChimney by remember { mutableStateOf("95,00") }
+                        var nkWinter by remember { mutableStateOf("185,00") }
+
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                            shape = RoundedCornerShape(18.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text(
+                                    text = "Nebenkostenabrechnungs-Assistent (§ 35a EStG · 20 % Direktabzug)",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = nkCaretaker,
+                                        onValueChange = { nkCaretaker = it },
+                                        label = { Text("Hausmeister (€)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                    OutlinedTextField(
+                                        value = nkGarden,
+                                        onValueChange = { nkGarden = it },
+                                        label = { Text("Gartenpflege (€)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                    OutlinedTextField(
+                                        value = nkCleaning,
+                                        onValueChange = { nkCleaning = it },
+                                        label = { Text("Reinigung (€)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                }
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedTextField(
+                                        value = nkChimney,
+                                        onValueChange = { nkChimney = it },
+                                        label = { Text("Schornsteinfeger (€)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                    OutlinedTextField(
+                                        value = nkWinter,
+                                        onValueChange = { nkWinter = it },
+                                        label = { Text("Winterdienst (€)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                    Button(
+                                        onClick = {
+                                            onApplyNebenkostenSec35a(
+                                                nkCaretaker,
+                                                nkGarden,
+                                                nkCleaning,
+                                                nkChimney,
+                                                nkWinter
+                                            )
+                                        }
+                                    ) {
+                                        Text("20 % Steuerabzug übernehmen")
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     WisoInterviewTopic.ANLAGE_KAP_CRYPTO -> {

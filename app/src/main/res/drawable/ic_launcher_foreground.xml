@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Reinweißes 'K' + Paragraph/Steuer-Schild im Zentrum (Safe-Zone 66x66) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,30h10v20l18,-20h13l-20,22l22,26h-13l-17,-20l-3,3v17h-10z" />
+    <!-- Königsblauer Indikator-Balken unter dem K -->
+    <path
+        android:fillColor="#DCE4FF"
+        android:pathData="M34,82h40v4h-40z" />
+</vector>

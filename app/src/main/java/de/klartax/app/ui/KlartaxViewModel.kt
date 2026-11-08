@@ -1111,6 +1111,111 @@ class KlartaxViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Mahnwesen (Zahlungserinnerung -> 1. Mahnstufe -> 2. Mahnstufe -> 3. Mahnstufe):
+     * Erhöht die Mahnstufe (`dunningLevel` 0..3) für offene Rechnungen GoBD-konform
+     * (der Rechnungsbetrag bleibt unverändert, der Status wird im Audit-Trail vermerkt).
+     */
+    fun advanceInvoiceDunningLevel(invoice: InvoiceEntity) {
+        if (invoice.documentType != "INVOICE" || invoice.status == "PAID") return
+        viewModelScope.launch {
+            val nextLevel = (invoice.dunningLevel + 1).coerceIn(1, 3)
+            val labelDe = when (nextLevel) {
+                1 -> "Zahlungserinnerung / 1. Mahnstufe"
+                2 -> "2. Mahnstufe (inkl. Verzugszins-Hinweis § 288 BGB)"
+                else -> "3. & letzte Mahnstufe (Ankündigung gerichtliches Mahnverfahren)"
+            }
+            val updated = invoice.copy(
+                dunningLevel = nextLevel,
+                updatedAtEpochMillis = System.currentTimeMillis()
+            )
+            dao.internalUpsertInvoice(updated)
+            _statusBannerDe.value = "$labelDe für Rechnung ${invoice.invoiceNumber} (${invoice.customerName}) ausgelöst."
+        }
+    }
+
+    /**
+     * Integrierte Projekt-Zeiterfassung (Stoppuhr & Stundenzettel):
+     * Legt einen neuen Zeiterfassungseintrag an, der sofort mit 1 Klick in ein Angebot oder eine E-Rechnung übernommen werden kann.
+     */
+    fun addTimeTrackingEntry(
+        projectName: String,
+        clientName: String,
+        taskDescription: String,
+        durationMinutes: Int,
+        hourlyRateEuro: String
+    ) {
+        val currentState = uiState.value ?: return
+        val profile = currentState.activeProfile
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val rateCents = runCatching { Money.toCents(Money.of(hourlyRateEuro)) }
+                .getOrDefault(150_00L)
+                .coerceAtLeast(1_00L)
+            val entry = TimeTrackingEntryEntity(
+                id = "TIME-${UUID.randomUUID().toString().take(6)}",
+                profileId = profile.id,
+                projectName = projectName.ifBlank { "Klartax Sprint / Consulting" },
+                clientName = clientName.ifBlank { "Süddeutsche FinTech Solutions AG" },
+                taskDescription = taskDescription.ifBlank { "Architektur- & Implementierungsleistung" },
+                dateIso = LocalDate.now().toString(),
+                durationMinutes = durationMinutes.coerceIn(15, 2400),
+                hourlyRateNetCents = rateCents,
+                isBilled = false,
+                linkedInvoiceId = null,
+                updatedAtEpochMillis = now
+            )
+            dao.upsertTimeTrackingEntries(listOf(entry))
+            val hours = BigDecimal(entry.durationMinutes).divide(BigDecimal("60"), 2, RoundingMode.HALF_UP)
+            _statusBannerDe.value = "Projekt-Zeiterfassung (${hours.toPlainString()} Std. · ${entry.projectName}) gespeichert – bereit zur Übernahme in Angebot/Rechnung."
+        }
+    }
+
+    /**
+     * Nebenkostenabrechnungs-Assistent (§ 35a EStG):
+     * Extrahiert Hausmeister, Gartenpflege, Reinigung, Schornsteinfeger & Winterdienst aus der Miet-/WEG-Abrechnung
+     * und zieht 20 % direkt von der festgesetzten Einkommensteuer ab.
+     */
+    fun applyNebenkostenSec35aAssistant(
+        caretakerEuro: String,
+        gardenEuro: String,
+        cleaningEuro: String,
+        chimneyEuro: String,
+        winterServiceEuro: String
+    ) {
+        val currentState = uiState.value ?: return
+        val profile = currentState.activeProfile
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val result = receiptAnalyzer.extractSec35aFromNebenkostenStatement(
+                caretakerCents = Money.toCents(runCatching { Money.of(caretakerEuro) }.getOrDefault(Money.ZERO)),
+                gardenCareCents = Money.toCents(runCatching { Money.of(gardenEuro) }.getOrDefault(Money.ZERO)),
+                cleaningCents = Money.toCents(runCatching { Money.of(cleaningEuro) }.getOrDefault(Money.ZERO)),
+                chimneySweepCents = Money.toCents(runCatching { Money.of(chimneyEuro) }.getOrDefault(Money.ZERO)),
+                winterServiceCents = Money.toCents(runCatching { Money.of(winterServiceEuro) }.getOrDefault(Money.ZERO))
+            )
+            val totalLaborCents = Money.toCents(result.householdServicesSec35aTotal.add(result.craftsmanSweepSec35a))
+            val existingNebenkosten = currentState.specialExpenses.firstOrNull {
+                it.recordCategory == "HOUSEHOLD_SERVICE_SEC35A"
+            }
+            val updatedEntity = SpecialExpenseAndBurdenEntity(
+                id = existingNebenkosten?.id ?: "SPEC-NK-${UUID.randomUUID().toString().take(6)}",
+                profileId = profile.id,
+                recordCategory = "HOUSEHOLD_SERVICE_SEC35A",
+                titleDe = "Nebenkostenabrechnung (§ 35a EStG): Hausmeister, Gartenpflege, Reinigung, Schornsteinfeger & Winterdienst",
+                providerOrRecipientName = "Hausverwaltung / WEG-Abrechnung",
+                invoiceDateIso = LocalDate.now().toString(),
+                paymentMethodBankTransfer = true,
+                totalInvoiceGrossCents = totalLaborCents,
+                eligibleLaborAndMachineCents = totalLaborCents,
+                disabilityDegreeGdB = null,
+                updatedAtEpochMillis = now
+            )
+            dao.upsertSpecialExpensesAndBurdens(listOf(updatedEntity))
+            _statusBannerDe.value = result.explanationDe
+        }
+    }
+
     // --- Interaktive WISO-Interview Eingabemethoden (Echtzeit-Neuberechnung) ---
 
     fun toggleSplittingAssessment(isMarriedJoint: Boolean) {
