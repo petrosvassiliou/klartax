@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App-Identität & Claim -->
+    <string name="app_name">Klartax</string>
+    <string name="app_claim">Buchhaltung &amp; Steuer im Klartext.</string>
+    <string name="app_subtitle">All-in-One EÜR (§ 4 Abs. 3 EStG) &amp; Einkommensteuer-Suite (Android &amp; ChromeOS)</string>
+    <string name="vault_decrypting">Entschlüssele SQLCipher-Tresor (klartax_encrypted.db)…</string>
+    <string name="action_close">Schließen</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_save">GoBD-konform speichern</string>
+
+    <!-- Hauptnavigation (Adaptive NavigationSuiteScaffold) -->
+    <string name="nav_cockpit">Cockpit</string>
+    <string name="nav_customers">Kunden &amp; Katalog</string>
+    <string name="nav_eur">Ausgaben &amp; EÜR</string>
+    <string name="nav_invoices">Angebote &amp; Rechnungen</string>
+    <string name="nav_wiso_tax">Steuererklärung</string>
+    <string name="nav_elster_sync">ELSTER &amp; Sync</string>
+
+    <!-- Live-Tacho & Rücklagen-Warner -->
+    <string name="tacho_refund_label">LIVE-ERSTATTUNGS-TACHO (§ 32a EStG)</string>
+    <string name="tacho_payment_due_label">VORAUSSICHTLICHE NACHZAHLUNG</string>
+    <string name="reserve_warner_title">FREIBERUFLER-RÜCKLAGEN-CHECK</string>
+    <string name="reserve_free_liquidity">Frei verfügbar</string>
+    <string name="reserve_tax_holdback">Steuerrücklage (ESt + USt)</string>
+    <string name="bank_balance_label">Geschäftskontostand</string>
+
+    <!-- Muster-Profile -->
+    <string name="profile_switcher_label">Aktives Steuerprofil</string>
+    <string name="profile_1_short">Kombi: Freiberufler &amp; Familie</string>
+    <string name="profile_2_short">Rein Privat: Arbeitnehmer &amp; Vermieter</string>
+
+    <!-- ChromeOS / Googlebook Tastatur-Shortcuts & Drag-and-Drop -->
+    <string name="shortcut_new_entry">Strg+N: Ausgabe / Beleg</string>
+    <string name="shortcut_search_placeholder">Klartext-Suche (Strg+F)…</string>
+    <string name="shortcut_sync">Strg+S: Zero-Knowledge Sync</string>
+    <string name="drag_drop_hint">PDF-, ZUGFeRD-, XRechnung-XML- oder Foto-Beleg hier ablegen (100 % On-Device Analyse)</string>
+    <string name="drag_drop_Zone_hint">PDF-, ZUGFeRD-, XRechnung-XML- oder Foto-Beleg hier ablegen (100 % On-Device Analyse)</string>
+    <string name="fab_scan_receipt">Ausgabe + PDF/Bild erfassen</string>
+
+    <!-- Kundenverwaltung, Produkt-/Leistungskatalog, Textbausteine & Briefpapier -->
+    <string name="customers_title">Kunden, Leistungen, Textbausteine &amp; Briefpapier</string>
+    <string name="customers_header_title">Kunden, Produkte/Leistungen &amp; Briefpapier</string>
+    <string name="customers_header_subtitle">SevDesk-Stammdaten: Kunden (BT-10), Leistungen/Artikel, Textbausteine &amp; DIN-5008-Briefpapier</string>
+    <string name="customer_new_button">+ Neuer Kunde</string>
+    <string name="customer_action_new">+ Neuer Kunde</string>
+    <string name="customer_create_invoice_button">Angebot / Auftrag / E-Rechnung erstellen →</string>
+    <string name="customer_action_create_invoice">Angebot / Auftrag / E-Rechnung erstellen →</string>
+
+    <!-- Ausgabenerfassung inkl. PDF- & Bilderanhänge -->
+    <string name="expense_capture_title">Ausgabenerfassung inkl. PDF- &amp; Bilderanhang</string>
+    <string name="expense_dialog_title">Ausgabe / EÜR-Beleg inkl. PDF- &amp; Bildanhang erfassen</string>
+    <string name="expense_attach_pdf_button">PDF-Beleg anhängen</string>
+    <string name="expense_attach_image_button">Foto / Bild anhängen (JPG/PNG)</string>
+    <string name="expense_attachment_preview_title">Angehängter Originalbeleg (GoBD-Archiv)</string>
+
+    <!-- GoBD & Sicherheit -->
+    <string name="gobd_locked_badge">GoBD-festgeschrieben (SHA-256)</string>
+    <string name="gobd_storno_button">GoBD-Storno &amp; Korrekturbuchung auslösen</string>
+    <string name="biometric_prompt_title">Klartax Tresor entsperren</string>
+    <string name="biometric_prompt_subtitle">Authentifizierung für SQLCipher-Datenbank &amp; Google Tink AES-256-GCM Schlüssel</string>
+    <string name="biometric_verified_badge">Biometrie / Geräte-PIN geschützt</string>
+
+    <!-- WISO Interview Themenbaum & Eingabemasken -->
+    <string name="wiso_tree_title">Steuer-Themenbaum</string>
+    <string name="wiso_topic_personal">Persönliches &amp; Familie</string>
+    <string name="wiso_topic_eur_bridge">Freiberufler (EÜR-Brücke)</string>
+    <string name="wiso_topic_anlage_n">Arbeitnehmer (Anlage N)</string>
+    <string name="wiso_topic_children">Kinder (Anlage Kind)</string>
+    <string name="wiso_topic_sec35a">Handwerker &amp; Haushalt (§ 35a)</string>
+    <string name="wiso_topic_kap_crypto">Kapital &amp; Krypto (KAP / SO)</string>
+    <string name="wiso_topic_rental_v">Vermietung (Anlage V)</string>
+    <string name="wiso_next_topic_button">Weiter zum nächsten Steuerthema →</string>
+
+    <!-- E-Rechnungs-Studio -->
+    <string name="einvoice_studio_title">Angebote, Aufträge &amp; E-Rechnung Studio (EN 16931)</string>
+    <string name="einvoice_tab_pdf">DIN-A4 Briefpapier &amp; GiroCode</string>
+    <string name="einvoice_tab_xml">Eingebettetes EN 16931 XML</string>
+    <string name="einvoice_tab_archive">Angebote, Aufträge &amp; Rechnungen</string>
+    <string name="einvoice_import_timesheet">Offene Zeiterfassung übernehmen</string>
+    <string name="einvoice_add_position_button">+ Position hinzufügen</string>
+    <string name="einvoice_issue_lock_button">Beleg speichern / GoBD-konform festschreiben</string>
+
+    <!-- Neuer Beleg / Buchung Dialog -->
+    <string name="dialog_new_entry_title">Ausgabe / EÜR-Beleg inkl. PDF- &amp; Bildanhang erfassen</string>
+    <string name="dialog_counterparty_label">Lieferant / Händler / Restaurant / Handwerker</string>
+    <string name="dialog_description_label">Leistungsbeschreibung / Verwendungszweck</string>
+    <string name="dialog_gross_euro_label">Bruttobetrag in Euro (z. B. 238,00)</string>
+</resources>
